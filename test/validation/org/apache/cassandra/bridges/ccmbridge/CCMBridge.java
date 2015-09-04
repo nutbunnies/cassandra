@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
+import java.util.Objects;
 
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
@@ -258,7 +259,7 @@ public class CCMBridge extends Bridge
     public void nodeTool(Node node, String command, String arguments)
     {
         String fullCommand;
-        if(arguments == "")
+        if(Objects.equals(arguments, ""))
         {
             fullCommand = "ccm node" + node.getName() + " nodetool " + command;
         }
@@ -334,7 +335,7 @@ public class CCMBridge extends Bridge
     public void ssTableSplit(Node node, String options, String keyspace)
     {
         String fullCommand;
-        if(options == "")
+        if(Objects.equals(options, ""))
         {
             fullCommand = "ccm node" + node.getName() + " sstablesplit";
         }
@@ -350,7 +351,7 @@ public class CCMBridge extends Bridge
     public void ssTableMetaData(Node node, String keyspace)
     {
         String fullCommand;
-        if(keyspace == "")
+        if(Objects.equals(keyspace, ""))
         {
             fullCommand = "ccm node" + node.getName() + " getsstables";
         }

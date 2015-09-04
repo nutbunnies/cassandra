@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Scanner;
 
 import org.apache.commons.lang3.StringUtils;
@@ -282,7 +283,7 @@ public class CToolBridge extends Bridge
     {
         String hostname = clusterEndpoints()[Integer.parseInt(node.getName())];
         String fullCommand;
-        if (arguments == "")
+        if (Objects.equals(arguments, ""))
         {
             fullCommand = "/home/automaton/fab/cassandra/bin/nodetool -h " + hostname + " " + command;
         }
@@ -306,7 +307,7 @@ public class CToolBridge extends Bridge
     public void ssTableSplit(Node node, String options, String keyspace_path)
     {
         String fullCommand;
-        if (options == "")
+        if (Objects.equals(options, ""))
         {
             fullCommand = "/home/automaton/fab/cassandra/tools/bin/sstablesplit /mnt/data1/cassandra/data/" + keyspace_path;
         }
