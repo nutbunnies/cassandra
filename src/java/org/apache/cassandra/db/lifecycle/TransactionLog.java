@@ -49,6 +49,7 @@ import org.apache.cassandra.db.compaction.OperationType;
 import org.apache.cassandra.io.sstable.Component;
 import org.apache.cassandra.io.sstable.Descriptor;
 import org.apache.cassandra.io.sstable.SSTable;
+import org.apache.cassandra.io.sstable.SnapshotDeletingTask;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
 import org.apache.cassandra.io.sstable.format.big.BigFormat;
 import org.apache.cassandra.io.util.FileUtils;
@@ -241,9 +242,9 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
             // Paranoid sanity checks: we create another record by looking at the files as they are
             // on disk right now and make sure the information still matches
             Record currentRecord = Record.makeOld(files, relativeFilePath);
-            if (updateTime != currentRecord.updateTime)
+            if (updateTime != currentRecord.updateTime && currentRecord.numFiles > 0)
             {
-                logger.error("Possible disk corruption detected for sstable [{}], record [{}]: last update time [{}] should have been [{}]",
+                logger.error("Unexpected files detected for sstable [{}], record [{}]: last update time [{}] should have been [{}]",
                              relativeFilePath,
                              record,
                              new Date(currentRecord.updateTime),
@@ -253,7 +254,7 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
 
             if (lastRecordIsCorrupt && currentRecord.numFiles < numFiles)
             { // if we found a corruption in the last record, then we continue only if the number of files matches exactly.
-                logger.error("Possible disk corruption detected for sstable [{}], record [{}]: number of files [{}] should have been [{}]",
+                logger.error("Unexpected files detected for sstable [{}], record [{}]: number of files [{}] should have been [{}]",
                              relativeFilePath,
                              record,
                              currentRecord.numFiles,
@@ -346,7 +347,7 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
             for (Record record : records)
             {
                 if (!record.verify(parent.getFolder(), false))
-                    throw new CorruptTransactionLogException(String.format("Failed to verify transaction %s record [%s]: possible disk corruption, aborting", parent.getId(), record),
+                    throw new CorruptTransactionLogException(String.format("Failed to verify transaction %s record [%s]: unexpected disk state, aborting", parent.getId(), record),
                                                              this);
             }
         }
@@ -384,7 +385,7 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
                 {
                     if (!record.verify(parent.getFolder(), true))
                         throw new CorruptTransactionLogException(String.format("Last record of transaction %s is corrupt [%s] and at least " +
-                                                                               "one previous record does not match state on disk, possible disk corruption, aborting",
+                                                                               "one previous record does not match state on disk, unexpected disk state, aborting",
                                                                                parent.getId(), message),
                                                                  this);
                 }
@@ -396,7 +397,7 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
             }
             else
             {
-                throw new CorruptTransactionLogException(String.format("Non-last record of transaction %s is corrupt [%s], possible disk corruption, aborting", parent.getId(), message), this);
+                throw new CorruptTransactionLogException(String.format("Non-last record of transaction %s is corrupt [%s], unexpected disk state, aborting", parent.getId(), message), this);
             }
         }
 
@@ -927,6 +928,9 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
         Runnable task;
         while ( null != (task = failedDeletions.poll()))
             ScheduledExecutors.nonPeriodicTasks.submit(task);
+
+        // On Windows, snapshots cannot be deleted so long as a segment of the root element is memory-mapped in NTFS.
+        SnapshotDeletingTask.rescheduleFailedTasks();
     }
 
     /**
@@ -989,7 +993,7 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
                     if (accumulate == null)
                         accumulate = data.removeUnfinishedLeftovers(accumulate);
                     else
-                        logger.error("Possible disk corruption: failed to read transaction log {}", log, accumulate);
+                        logger.error("Unexpected disk state: failed to read transaction log {}", log, accumulate);
                 }
             }
         }
@@ -1005,7 +1009,7 @@ public class TransactionLog extends Transactional.AbstractTransactional implemen
     static final class FileLister
     {
         // The maximum number of attempts for scanning the folder
-        private static final int MAX_ATTEMPTS = 5;
+        private static final int MAX_ATTEMPTS = 10;
 
         // The delay between each attempt
         private static final int REATTEMPT_DELAY_MILLIS = 5;

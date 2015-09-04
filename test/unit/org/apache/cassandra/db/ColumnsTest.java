@@ -83,9 +83,9 @@ public class ColumnsTest
 
     private void assertSubset(Columns superset, Columns subset)
     {
-        Assert.assertTrue(superset.contains(superset));
-        Assert.assertTrue(superset.contains(subset));
-        Assert.assertFalse(subset.contains(superset));
+        Assert.assertTrue(superset.containsAll(superset));
+        Assert.assertTrue(superset.containsAll(subset));
+        Assert.assertFalse(subset.containsAll(superset));
     }
 
     @Test
@@ -121,6 +121,26 @@ public class ColumnsTest
     {
         for (ColumnsCheck randomColumns : randomHuge())
             testSerializeSubset(randomColumns);
+    }
+
+    @Test
+    public void testContainsAllWithLargeNumberOfColumns()
+    {
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < 50; i++)
+            names.add("clustering_" + i);
+
+        List<ColumnDefinition> defs = new ArrayList<>();
+        addClustering(names, defs);
+
+        Columns columns = Columns.from(new HashSet<>(defs));
+
+        defs = new ArrayList<>();
+        addClustering(names.subList(0, 8), defs);
+
+        Columns subset = Columns.from(new HashSet<>(defs));
+
+        Assert.assertTrue(columns.containsAll(subset));
     }
 
     private void testSerializeSubset(ColumnsCheck input) throws IOException
@@ -255,7 +275,7 @@ public class ColumnsTest
             Columns subset = columns;
             for (ColumnDefinition def : remove)
                 subset = subset.without(def);
-            Assert.assertEquals(columns.columnCount() - remove.size(), subset.columnCount());
+            Assert.assertEquals(columns.size() - remove.size(), subset.size());
             List<ColumnDefinition> remainingDefs = Lists.newArrayList(columns);
             remainingDefs.removeAll(remove);
             return new ColumnsCheck(subset, remainingDefs);

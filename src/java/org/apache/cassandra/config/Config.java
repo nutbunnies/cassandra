@@ -84,7 +84,7 @@ public class Config
 
     public volatile Long truncate_request_timeout_in_ms = 60000L;
 
-    public Integer streaming_socket_timeout_in_ms = 0;
+    public Integer streaming_socket_timeout_in_ms = 3600000;
 
     public boolean cross_node_timeout = false;
 
@@ -93,7 +93,6 @@ public class Config
     public Integer concurrent_reads = 32;
     public Integer concurrent_writes = 32;
     public Integer concurrent_counter_writes = 32;
-    public Integer concurrent_batchlog_writes = 32;
     public Integer concurrent_materialized_view_writes = 32;
 
     @Deprecated

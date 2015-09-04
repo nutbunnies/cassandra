@@ -355,7 +355,6 @@ seed_provider:
 concurrent_reads: 32
 concurrent_writes: 32
 concurrent_counter_writes: 32
-concurrent_batchlog_writes: 32
 
 # For materialized view writes, as there is a read involved, so this should
 # be limited by the less of concurrent reads or concurrent writes.
@@ -407,7 +406,9 @@ memtable_allocation_type: heap_buffers
 # in the oldest segment and remove it.  So a small total commitlog space
 # will tend to cause more flush activity on less-active columnfamilies.
 #
-# The default value is 8192.
+# The default value is the smaller of 8192, and 1/4 of the total space
+# of the commitlog volume.
+#
 # commitlog_total_space_in_mb: 8192
 
 # This sets the amount of memtable flush writer threads.  These will
@@ -722,8 +723,8 @@ cross_node_timeout: false
 # When a timeout occurs during streaming, streaming is retried from the start
 # of the current file. This _can_ involve re-streaming an important amount of
 # data, so you should avoid setting the value too low.
-# Default value is 0, which never timeout streams.
-# streaming_socket_timeout_in_ms: 0
+# Default value is 3600000, which means streams timeout after an hour.
+# streaming_socket_timeout_in_ms: 3600000
 
 # phi value that must be reached for a host to be marked down.
 # most users should never need to adjust this.
