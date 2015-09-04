@@ -22,17 +22,21 @@ package org.apache.cassandra;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import com.google.common.io.ByteStreams;
 import org.junit.After;
@@ -68,23 +72,10 @@ public class HarnessTest
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> discoverTests()
     {
-
         File folder = new File("../cassandra/test/validation/org/apache/cassandra/htest");
-        File[] listOfFiles = folder.listFiles();
-
-        Collection<Object[]> result = new ArrayList<Object[]>();
-
-        for (int i = 0; i < listOfFiles.length; i++)
-        {
-            File file = listOfFiles[i];
-            if (file.isFile() && file.getName().endsWith(".yaml"))
-            {
-                String content = FileUtils.getCanonicalPath(file);
-                result.add(new Object[]{content});
-            }
-        }
-
-        return result;
+        return Arrays.stream(folder.listFiles(pathname -> pathname.isFile() && pathname.getName().endsWith(".yaml")))
+                                   .map(file -> new Object[]{FileUtils.getCanonicalPath(file)})
+                                   .collect(Collectors.toList());
     }
 
     public HarnessTest(String yamlParameter)
@@ -122,7 +113,7 @@ public class HarnessTest
         cluster.captureLogs(getTestName(yaml));
         String result = cluster.readClusterLogs(getTestName(yaml));
         cluster.destroy();
-        Assert.assertTrue(result, result == "");
+        Assert.assertTrue(result, Objects.equals(result, ""));
         parseFailures(failures);
     }
 
