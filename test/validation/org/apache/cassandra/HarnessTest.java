@@ -22,7 +22,6 @@ package org.apache.cassandra;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -91,13 +90,9 @@ public class HarnessTest
         HarnessContext context = new HarnessContext(this, cluster);
         for (String[] moduleGroup : config.modules)
         {
-            ArrayList<Module> modules = new ArrayList<>();
-            for (String moduleName : moduleGroup)
-            {
-                Module module = reflectModuleByName(moduleName, config, context);
-                modules.add(module);
-            }
-
+            List<Module> modules = Arrays.stream(moduleGroup)
+                                         .map(moduleName -> reflectModuleByName(moduleName, config, context))
+                                         .collect(Collectors.toList());
             runModuleGroup(modules);
         }
     }
@@ -105,10 +100,7 @@ public class HarnessTest
     @After
     public void tearDown()
     {
-        for(String moduleName : failures.keySet())
-        {
-            failures.get(moduleName).forEach(logger::error);
-        }
+        failures.values().forEach(failureList -> failureList.forEach(logger::error));
         cluster.stop();
         cluster.captureLogs(getTestName(yaml));
         String result = cluster.readClusterLogs(getTestName(yaml));
@@ -120,9 +112,13 @@ public class HarnessTest
     public void cleanConfig(Config config)
     {
         if (config.ignoredErrors == null)
+        {
             config.ignoredErrors = new ArrayList<>();
+        }
         if (config.requiredErrors == null)
+        {
             config.requiredErrors = new ArrayList<>();
+        }
     }
 
     public void parseFailures(Map<String, List<String>> failures)
@@ -175,14 +171,9 @@ public class HarnessTest
         return executor.submit(task);
     }
 
-    public void runModuleGroup(ArrayList<Module> modules)
+    public void runModuleGroup(final List<Module> modules)
     {
-        ArrayList<Future> futures = new ArrayList<>(modules.size());
-        for (Module module : modules)
-        {
-            Future future = module.validate();
-            futures.add(future);
-        }
+        List<Future> futures = modules.stream().map(Module::validate).collect(Collectors.toList());
 
         try
         {
